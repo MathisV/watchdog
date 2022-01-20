@@ -1,0 +1,44 @@
+#!/bin/bash
+
+# Get config from index and attribute
+# param 1 : index, exemple : 0
+# param 2 : json attribute, exemple : 'user_run'
+function get_config {
+    jq '.['$1'].'$2'' --raw-output watchdog.conf;
+}
+
+function process_checker {
+    timestamp=0;
+    watchtime=$(get_config $i 'watchtime');
+    while [[ $(get_config $i 'enable') == "true" && $watchtime -gt 0 ]];
+    do
+        if test $(expr $(date +%s) -  $timestamp) -ge $(get_config $1 "watchtime");
+        then
+            ps -U $(get_config $1 "user_run") | grep $(get_config $1 "Name") >/dev/null || (sudo $(get_config $1 "binary") $(get_config $1 "arguments") >/dev/null 2>/dev/null && logger -s "[WatchDog] Starting of $(get_config $i 'Name')..." 2>>/var/log/watchdog);
+            timestamp=$(date +%s);
+        fi;
+    done;
+    if [[ ! $watchtime || $watchtime = "" || $watchtime = 0 || $watchtime -eq 0 ]];
+    then
+        logger -s "[WatchDog] Error on $(get_config $i 'Name') services" 2>>/var/log/watchdog;
+    fi;
+}
+
+# Get length index of configuration
+LENGTH=$(expr $(jq length watchdog.conf) - 1);
+
+
+if [[ $# -eq 1 && $1 = "stop" ]];
+then
+    pkill watchdog;
+elif [[ $# -eq 1 && $1 = "start" ]];
+then
+    for i in $(seq 0 $LENGTH);
+    do
+        # Check if watchdog is enable for the processus
+        process_checker $i &
+    done;
+else
+    echo "  ./watchdog start        Start the watchdog"
+    echo "  ./watchdog stop         Stop the watchdog"
+fi;
