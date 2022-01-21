@@ -9,13 +9,24 @@ function get_config {
 
 function process_checker {
     timestamp=0;
+    nb_try=0;
     while [[ $(get_config $i 'enable') == "true" && $(get_config $1 "watchtime") -gt 0 ]];
     do
         if test $(expr $(date +%s) -  $timestamp) -ge $(get_config $1 "watchtime");
         then
-            logger -s "Check" 2>>/var/log/watchdog;
-            ps -e | grep $(get_config $1 "Name") >/dev/null || (sudo $(get_config $1 "binary") $(get_config $1 "arguments") >/dev/null 2>/dev/null && logger -s "[WatchDog] Starting of $(get_config $i 'Name')..." 2>>/var/log/watchdog;
+            logger -s "[WatchDog] Checking process $(get_config $1 "Name")" 2>>/var/log/watchdog;
+            on_error=$(ps -e | grep $(get_config $1 "Name") >/dev/null && echo 0 || (sudo $(get_config $1 "binary") $(get_config $1 "arguments") >/dev/null 2>/dev/null && logger -s "[WatchDog] Starting of $(get_config $i 'Name')..." 2>>/var/log/watchdog && echo 1));
+            if [ $on_error = "1" ];
+            then
+                nb_try=$(expr $nb_try + 1); 2>>/var/log/watchdog;
+            else
+                nb_try=0;
+            fi;
             timestamp=$(date +%s);
+            if [ $nb_try -ge $(get_config $1 "nbtrybeforealert") ];
+            then
+                logger -s "[WatchDog] Alert occured on process : $(get_config $1 "Name")" 2>>/var/log/watchdog;
+            fi;
         fi;
     done;
     if [[ ! $(get_config $1 "watchtime") || $(get_config $1 "watchtime") = "" || $(get_config $1 "watchtime") = 0 || $(get_config $1 "watchtime") -eq 0 ]];
@@ -35,7 +46,6 @@ elif [[ $# -eq 1 && $1 = "start" ]];
 then
     for i in $(seq 0 $LENGTH);
     do
-        # Check if watchdog is enable for the processus
         process_checker $i &
     done;
 else
