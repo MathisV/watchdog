@@ -14,24 +14,24 @@ function process_checker {
     do
         if test $(expr $(date +%s) -  $timestamp) -ge $(get_config $1 "watchtime");
         then
-            logger -s "[WatchDog] Checking process $(get_config $1 "Name")" 2>>/var/log/watchdog;
-            on_error=$(ps -e | grep $(get_config $1 "Name") >/dev/null && echo 0 || (sudo $(get_config $1 "binary") $(get_config $1 "arguments") >/dev/null 2>/dev/null && logger -s "[WatchDog] Starting of $(get_config $i 'Name')..." 2>>/var/log/watchdog && echo 1));
+            logger -t watchdog "Checking process $(get_config $1 "Name")";
+            on_error=$(ps -e | grep $(get_config $1 "Name") >/dev/null && echo 0 || (sudo $(get_config $1 "binary") $(get_config $1 "arguments") >/dev/null 2>/dev/null && logger -t watchdog "Starting of $(get_config $i 'Name')..." && echo 1));
             if [ $on_error = "1" ];
             then
-                nb_try=$(expr $nb_try + 1); 2>>/var/log/watchdog;
+                nb_try=$(expr $nb_try + 1);
             else
                 nb_try=0;
             fi;
             timestamp=$(date +%s);
             if [ $nb_try -ge $(get_config $1 "nbtrybeforealert") ];
             then
-                logger -s "[WatchDog] Alert occured on process : $(get_config $1 "Name")" 2>>/var/log/watchdog;
+                logger -t watchdog "[ERROR] Alert occured on process : $(get_config $1 "Name")";
             fi;
         fi;
     done;
     if [[ ! $(get_config $1 "watchtime") || $(get_config $1 "watchtime") = "" || $(get_config $1 "watchtime") = 0 || $(get_config $1 "watchtime") -eq 0 ]];
     then
-        logger -s "[WatchDog] Error of configuration on $(get_config $i 'Name') services" 2>>/var/log/watchdog;
+        logger -t "Error of configuration on $(get_config $i 'Name') services";
     fi;
 }
 
