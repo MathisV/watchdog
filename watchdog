@@ -9,16 +9,15 @@ function get_config {
 
 function process_checker {
     timestamp=0;
-    watchtime=$(get_config $i 'watchtime');
-    while [[ $(get_config $i 'enable') == "true" && $watchtime -gt 0 ]];
+    while [[ $(get_config $i 'enable') == "true" && $(get_config $1 "watchtime") -gt 0 ]];
     do
         if test $(expr $(date +%s) -  $timestamp) -ge $(get_config $1 "watchtime");
         then
-            ps -U $(get_config $1 "user_run") | grep $(get_config $1 "Name") >/dev/null || (sudo $(get_config $1 "binary") $(get_config $1 "arguments") >/dev/null 2>/dev/null && logger -s "[WatchDog] Starting of $(get_config $i 'Name')..." 2>>/var/log/watchdog);
-            timestamp=$(date +%s);
+            ps -e | grep $(get_config $1 "Name") >/dev/null || (sudo $(get_config $1 "binary") $(get_config $1 "arguments") >/dev/null 2>/dev/null && logger -s "[WatchDog] Starting of $(get_config $i 'Name')..." 2>>/var/log/watchdog);
         fi;
+        timestamp=$(date +%s);
     done;
-    if [[ ! $watchtime || $watchtime = "" || $watchtime = 0 || $watchtime -eq 0 ]];
+    if [[ ! $(get_config $1 "watchtime") || $(get_config $1 "watchtime") = "" || $(get_config $1 "watchtime") = 0 || $(get_config $1 "watchtime") -eq 0 ]];
     then
         logger -s "[WatchDog] Error on $(get_config $i 'Name') services" 2>>/var/log/watchdog;
     fi;
