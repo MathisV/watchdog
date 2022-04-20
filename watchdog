@@ -16,7 +16,7 @@ function process_checker {
         then
             logger -t watchdog "Checking process $(get_config $1 "Name")";
             on_error=$(ps -e | grep $(get_config $1 "Name") >/dev/null && echo 0 || (sudo $(get_config $1 "binary") $(get_config $1 "arguments") >/dev/null 2>/dev/null && logger -t watchdog "Starting of $(get_config $i 'Name')..." && echo 1));
-            if [ $on_error = "1" ];
+            if [ "$on_error" == "1" ];
             then
                 nb_try=$(expr $nb_try + 1);
             else
